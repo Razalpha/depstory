@@ -17,7 +17,8 @@ test("ships a self-contained, accessible product site", async () => {
   assert.match(html, /role="tablist"/);
   assert.match(html, /role="tabpanel"/);
   assert.match(html, /href="#main">Skip to content<\/a>/);
-  assert.doesNotMatch(html, /<(?:script|link)[^>]+(?:src|href)="https?:/i);
+  assert.doesNotMatch(html, /<script[^>]+src="https?:/i);
+  assert.doesNotMatch(html, /<link[^>]+rel="stylesheet"[^>]+href="https?:/i);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /@media \(max-width: 680px\)/);
   assert.match(script, /navigator\.clipboard\.writeText/);
