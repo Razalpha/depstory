@@ -1,0 +1,31 @@
+{
+  "name": "depstory",
+  "version": "0.1.0",
+  "description": "Explain when, why, and where a JavaScript dependency entered a repository.",
+  "type": "module",
+  "bin": {
+    "depstory": "./bin/depstory.mjs"
+  },
+  "scripts": {
+    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/git.mjs && node --check src/scan.mjs",
+    "test": "node --test",
+    "demo": "node bin/depstory.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dependencies",
+    "git",
+    "archaeology",
+    "cli",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "files": [
+    "bin",
+    "src",
+    "LICENSE",
+    "README.md"
+  ]
+}

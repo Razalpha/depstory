@@ -1,0 +1,26 @@
+name: Feature or adapter
+description: Propose a focused addition to depstory
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What dependency-history question cannot be answered today?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Example repository shape
+      description: Show a minimal manifest, import, or Git-history example.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected evidence
+      description: What should depstory report, without guessing?
+    validations:
+      required: true
