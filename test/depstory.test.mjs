@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { findIntroduction } from "../src/git.mjs";
-import { findUsageFiles, readManifest } from "../src/scan.mjs";
+import { extractModuleSpecifiers } from "../src/imports.mjs";
+import { findUsageFiles, findUsageMap, readManifest } from "../src/scan.mjs";
 
 function git(cwd, ...args) {
   execFileSync("git", args, { cwd, stdio: "ignore", windowsHide: true });
@@ -42,4 +43,46 @@ test("returns null when a directory has no Git history", async (t) => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), "depstory-no-git-"));
   t.after(() => rm(cwd, { recursive: true, force: true }));
   assert.equal(await findIntroduction(cwd, "package.json", "zod"), null);
+});
+
+test("extracts supported module syntax and ignores comments and examples", () => {
+  const source = `
+    import React from "react";
+    import "dotenv/config";
+    export { z } from "zod/v4";
+    const kleur = require("kleur");
+    const lazy = import("@scope/tool/runtime");
+    // import "commented-out";
+    /* require("also-commented-out") */
+    const example = 'import "inside-a-string"';
+    const template = \`require("inside-a-template")\`;
+    const metadata = import.meta.url;
+  `;
+
+  assert.deepEqual(extractModuleSpecifiers(source).sort(), [
+    "@scope/tool/runtime",
+    "dotenv/config",
+    "kleur",
+    "react",
+    "zod/v4",
+  ]);
+});
+
+test("scans every source file once and maps package subpaths", async (t) => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "depstory-usage-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(path.join(cwd, "src"));
+  await writeFile(
+    path.join(cwd, "src", "app.ts"),
+    'import "dotenv/config";\nimport value from "@scope/tool/runtime";\n',
+  );
+  await writeFile(
+    path.join(cwd, "src", "ignored.ts"),
+    '// import "dotenv";\nconst example = \'require("@scope/tool")\';\n',
+  );
+
+  const usage = await findUsageMap(cwd, ["dotenv", "@scope/tool", "unused"]);
+  assert.deepEqual(usage.get("dotenv"), ["src/app.ts"]);
+  assert.deepEqual(usage.get("@scope/tool"), ["src/app.ts"]);
+  assert.deepEqual(usage.get("unused"), []);
 });

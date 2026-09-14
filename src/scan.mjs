@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { extractModuleSpecifiers } from "./imports.mjs";
 
 const SOURCE_EXTENSIONS = new Set([
   ".js",
@@ -25,17 +26,6 @@ const IGNORED_DIRECTORIES = new Set([
   ".cache",
 ]);
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function importPattern(dependency) {
-  const escaped = escapeRegExp(dependency);
-  return new RegExp(
-    `(?:from\\s*|import\\s*\\(|require\\s*\\()\\s*[\"']${escaped}(?:/[^\"']*)?[\"']`,
-  );
-}
-
 async function walk(directory, root, files = []) {
   let entries;
   try {
@@ -59,19 +49,37 @@ async function walk(directory, root, files = []) {
 }
 
 export async function findUsageFiles(cwd, dependency) {
-  const pattern = importPattern(dependency);
+  const usage = await findUsageMap(cwd, [dependency]);
+  return usage.get(dependency) ?? [];
+}
+
+function belongsToDependency(specifier, dependency) {
+  return specifier === dependency || specifier.startsWith(`${dependency}/`);
+}
+
+export async function findUsageMap(cwd, dependencies) {
   const files = await walk(cwd, cwd);
-  const matches = [];
+  const usage = new Map(dependencies.map((dependency) => [dependency, []]));
 
   for (const relative of files) {
     const absolute = path.join(cwd, relative);
-    const stat = await fs.stat(absolute);
-    if (stat.size > 1024 * 1024) continue;
-    const content = await fs.readFile(absolute, "utf8");
-    if (pattern.test(content)) matches.push(relative);
+    try {
+      const stat = await fs.stat(absolute);
+      if (stat.size > 1024 * 1024) continue;
+      const content = await fs.readFile(absolute, "utf8");
+      const specifiers = extractModuleSpecifiers(content);
+      for (const dependency of dependencies) {
+        if (specifiers.some((specifier) => belongsToDependency(specifier, dependency))) {
+          usage.get(dependency).push(relative);
+        }
+      }
+    } catch {
+      // A file can disappear while the repository is being scanned. Treat the
+      // scan as a point-in-time best effort instead of failing the whole run.
+    }
   }
 
-  return matches;
+  return usage;
 }
 
 export async function readManifest(cwd) {

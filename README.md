@@ -49,9 +49,10 @@ node bin/depstory.mjs
 
 ## Current scope
 
-The first release reads the four dependency sections in `package.json`, finds
-direct ESM/CommonJS imports, and searches the available Git history for the
-commit that first added each package.
+The first release reads the four dependency sections in `package.json`, scans
+each source file once for static, side-effect, dynamic, re-export, and CommonJS
+imports, and searches the available Git history for the commit that first added
+each package. Comments and code examples are ignored to avoid false positives.
 
 ## Roadmap — contributions welcome
 

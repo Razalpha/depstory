@@ -1,6 +1,6 @@
 import path from "node:path";
 import { findIntroduction } from "./git.mjs";
-import { findUsageFiles, readManifest } from "./scan.mjs";
+import { findUsageMap, readManifest } from "./scan.mjs";
 
 function parseArguments(args) {
   const options = { cwd: process.cwd(), format: "text", dependency: null };
@@ -8,7 +8,13 @@ function parseArguments(args) {
     const value = args[index];
     if (value === "--json") options.format = "json";
     else if (value === "--markdown") options.format = "markdown";
-    else if (value === "--cwd") options.cwd = path.resolve(args[++index] ?? "");
+    else if (value === "--cwd") {
+      const directory = args[++index];
+      if (!directory || directory.startsWith("-")) {
+        throw new Error("--cwd requires a directory path.");
+      }
+      options.cwd = path.resolve(directory);
+    }
     else if (value === "--help" || value === "-h") options.help = true;
     else if (value.startsWith("-")) throw new Error(`Unknown option: ${value}`);
     else if (!options.dependency) options.dependency = value;
@@ -28,14 +34,6 @@ Examples:
   depstory --json
   depstory zod --cwd ../my-project
 `;
-}
-
-async function analyze(cwd, item, manifestPath) {
-  const [introduced, usageFiles] = await Promise.all([
-    findIntroduction(cwd, manifestPath, item.name),
-    findUsageFiles(cwd, item.name),
-  ]);
-  return { ...item, introduced, usageFiles };
 }
 
 function renderText(project, stories) {
@@ -94,9 +92,22 @@ export async function run(args) {
     throw new Error(`Dependency \"${options.dependency}\" is not declared in package.json.`);
   }
 
-  const stories = await Promise.all(
-    selected.map((item) => analyze(options.cwd, item, manifestPath)),
+  const usagePromise = findUsageMap(
+    options.cwd,
+    selected.map((item) => item.name),
   );
+  const introductionsPromise = Promise.all(
+    selected.map((item) => findIntroduction(options.cwd, manifestPath, item.name)),
+  );
+  const [usage, introductions] = await Promise.all([
+    usagePromise,
+    introductionsPromise,
+  ]);
+  const stories = selected.map((item, index) => ({
+    ...item,
+    introduced: introductions[index],
+    usageFiles: usage.get(item.name) ?? [],
+  }));
   const project = manifest.name ?? path.basename(options.cwd);
 
   if (options.format === "json") {

@@ -7,7 +7,7 @@
     "depstory": "./bin/depstory.mjs"
   },
   "scripts": {
-    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/git.mjs && node --check src/scan.mjs",
+    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/scan.mjs",
     "test": "node --test",
     "demo": "node bin/depstory.mjs"
   },
