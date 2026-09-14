@@ -8,7 +8,7 @@ Your `package.json` records what a project depends on. `depstory` uses the Git
 history and current imports to add the missing context: when a package appeared,
 what the introducing commit said, and where that package is still imported.
 
-[Türkçe README](README.tr.md)
+[Website](https://razalpha.github.io/depstory/) · [GitHub Marketplace](https://github.com/marketplace/actions/dependency-change-report) · [Türkçe README](README.tr.md)
 
 ```text
 $ npx --yes github:Razalpha/depstory zod

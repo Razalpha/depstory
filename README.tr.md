@@ -9,7 +9,7 @@ ise Git geçmişiyle güncel importları bir araya getirerek paketin ne zaman
 eklendiğini, o commit'in ne söylediğini ve bugün hangi dosyalarda kullanıldığını
 gösterir.
 
-[English README](README.md)
+[Web sitesi](https://razalpha.github.io/depstory/) · [GitHub Marketplace](https://github.com/marketplace/actions/dependency-change-report) · [English README](README.md)
 
 ```text
 $ npx --yes github:Razalpha/depstory zod
