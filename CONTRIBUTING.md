@@ -26,6 +26,16 @@ npm run coverage
 npm pack --dry-run
 ```
 
+The product site is committed as plain static assets. Preview it without an
+additional install:
+
+```bash
+npm run site:preview
+```
+
+The server listens on `127.0.0.1:4173`. Set `DEPSTORY_SITE_PORT` to use a
+different local port.
+
 ## Pull requests
 
 - Keep analysis read-only and deterministic.
