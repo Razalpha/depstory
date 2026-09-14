@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible incorrect result or failure
+title: "fix: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove private names, paths, and credentials from examples before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: depstory version
+      description: Run `depstory --version`.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Node.js version, and Git version.
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest manifest, source sample, and command that reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+    validations:
+      required: true

@@ -1,14 +1,15 @@
 {
   "name": "depstory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Explain when, why, and where a JavaScript dependency entered a repository.",
   "type": "module",
   "bin": {
     "depstory": "./bin/depstory.mjs"
   },
   "scripts": {
-    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/scan.mjs",
+    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/manifest.mjs && node --check src/scan.mjs",
     "test": "node --test",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=75",
     "demo": "node bin/depstory.mjs"
   },
   "engines": {
@@ -33,7 +34,10 @@
   "files": [
     "bin",
     "src",
+    "docs",
+    "CHANGELOG.md",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.tr.md"
   ]
 }

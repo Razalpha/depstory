@@ -6,6 +6,21 @@ function isIdentifierPart(character) {
   return /[A-Za-z0-9_$]/.test(character ?? "");
 }
 
+const REGULAR_EXPRESSION_PREFIX_KEYWORDS = new Set([
+  "await",
+  "case",
+  "delete",
+  "in",
+  "instanceof",
+  "new",
+  "of",
+  "return",
+  "throw",
+  "typeof",
+  "void",
+  "yield",
+]);
+
 function readIdentifier(source, start) {
   let end = start + 1;
   while (isIdentifierPart(source[end])) end += 1;
@@ -40,6 +55,51 @@ function skipTemplate(source, start) {
   return source.length;
 }
 
+function previousSignificantIndex(source, start) {
+  let index = start - 1;
+  while (index >= 0 && /\s/.test(source[index])) index -= 1;
+  return index;
+}
+
+function isPropertyAccess(source, start) {
+  const previous = previousSignificantIndex(source, start);
+  return source[previous] === ".";
+}
+
+function canStartRegularExpression(source, start) {
+  const previous = previousSignificantIndex(source, start);
+  if (previous < 0) return true;
+  if ("([{:;,=!?&|+-*%^~<>}".includes(source[previous])) return true;
+  if (!isIdentifierPart(source[previous])) return false;
+
+  let wordStart = previous;
+  while (wordStart > 0 && isIdentifierPart(source[wordStart - 1])) wordStart -= 1;
+  return REGULAR_EXPRESSION_PREFIX_KEYWORDS.has(source.slice(wordStart, previous + 1));
+}
+
+function skipRegularExpression(source, start) {
+  let index = start + 1;
+  let inCharacterClass = false;
+  while (index < source.length) {
+    const character = source[index];
+    if (character === "\\") {
+      index += 2;
+      continue;
+    }
+    if (character === "[") inCharacterClass = true;
+    else if (character === "]") inCharacterClass = false;
+    else if (character === "/" && !inCharacterClass) {
+      index += 1;
+      while (/[A-Za-z]/.test(source[index] ?? "")) index += 1;
+      return index;
+    } else if (character === "\n" || character === "\r") {
+      return start + 1;
+    }
+    index += 1;
+  }
+  return start + 1;
+}
+
 function skipTrivia(source, start) {
   let index = start;
   while (index < source.length) {
@@ -72,6 +132,10 @@ function readSpecifierAfterFrom(source, start) {
     }
     if (character === "`") {
       index = skipTemplate(source, index);
+      continue;
+    }
+    if (character === "/" && canStartRegularExpression(source, index)) {
+      index = skipRegularExpression(source, index);
       continue;
     }
     if (isIdentifierStart(character)) {
@@ -112,15 +176,21 @@ export function extractModuleSpecifiers(source) {
       index = skipTemplate(source, index);
       continue;
     }
+    if (character === "/" && canStartRegularExpression(source, index)) {
+      index = skipRegularExpression(source, index);
+      continue;
+    }
     if (!isIdentifierStart(character)) {
       index += 1;
       continue;
     }
 
+    const tokenStart = index;
     const token = readIdentifier(source, index);
     index = token.end;
 
     if (token.value === "import") {
+      if (isPropertyAccess(source, tokenStart)) continue;
       let cursor = skipTrivia(source, token.end);
       if (source[cursor] === '"' || source[cursor] === "'") {
         const literal = readQuoted(source, cursor);
@@ -153,6 +223,7 @@ export function extractModuleSpecifiers(source) {
     }
 
     if (token.value === "require") {
+      if (isPropertyAccess(source, tokenStart)) continue;
       let cursor = skipTrivia(source, token.end);
       if (source[cursor] !== "(") continue;
       cursor = skipTrivia(source, cursor + 1);

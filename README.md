@@ -1,91 +1,109 @@
 # depstory
 
 [![CI](https://github.com/Razalpha/depstory/actions/workflows/ci.yml/badge.svg)](https://github.com/Razalpha/depstory/actions/workflows/ci.yml)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933)](package.json)
+[![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> Your manifest says **what** you installed. Git remembers **why**.
+Your `package.json` records what a project depends on. `depstory` uses the Git
+history and current imports to add the missing context: when a package appeared,
+what the introducing commit said, and where that package is still imported.
 
-`depstory` is a zero-dependency CLI that connects every JavaScript dependency to
-the commit that introduced it and the source files that still use it.
+[Türkçe README](README.tr.md)
 
 ```text
-$ npx depstory zod
+$ npx --yes github:Razalpha/depstory zod
+
+demo-api — 1 dependency declaration across 1 manifest
 
 zod ^4.0.0 (dependencies)
-  introduced 2026-09-14 in 68d9f4a1: feat: validate user input
-  used by 2 file(s): src/schema.ts, src/api.ts
+  introduced 2026-09-14 in 68d9f4a1: validate incoming requests
+  used by 2 file(s): src/api.ts, src/schema.ts
 ```
 
-## Why this is different
+The command is useful when reviewing an unfamiliar repository, checking whether
+a package can be removed, or finding the original context before an upgrade.
+It reads the repository in place; it does not install dependencies or execute
+project code.
 
-Package managers explain dependency trees. Unused-dependency tools inspect the
-current tree. `depstory` adds the missing historical layer:
+## Run it
 
-- When did this dependency enter the repository?
-- What problem did the original commit say it solved?
-- Which files still import it today?
-- Is it declared but no longer directly used?
-
-Everything runs locally. There is no API key, telemetry, or AI-generated guess.
-
-## Try it
-
-Requires Node.js 20+ and Git.
+Node.js 20 or newer and Git are required. The package is currently installed
+straight from this repository:
 
 ```bash
-npx github:Razalpha/depstory
-npx github:Razalpha/depstory react
-npx github:Razalpha/depstory --markdown
-npx github:Razalpha/depstory --json
-npx github:Razalpha/depstory zod --cwd ../another-project
+npx --yes github:Razalpha/depstory
+npx --yes github:Razalpha/depstory react
+npx --yes github:Razalpha/depstory --workspace packages/web
+npx --yes github:Razalpha/depstory --markdown
+npx --yes github:Razalpha/depstory --json
+npx --yes github:Razalpha/depstory zod --cwd ../another-project
 ```
 
-After the first npm release, the shorter `npx depstory` command will work too.
-For local development, clone this repository and run:
+For repeated use:
 
 ```bash
-npm test
-node bin/depstory.mjs
+npm install --global github:Razalpha/depstory
+depstory --help
 ```
 
-## Current scope
+## What it reports
 
-The first release reads the four dependency sections in `package.json`, scans
-each source file once for static, side-effect, dynamic, re-export, and CommonJS
-imports, and searches the available Git history for the commit that first added
-each package. Comments and code examples are ignored to avoid false positives.
+For every declaration in `dependencies`, `devDependencies`,
+`peerDependencies`, and `optionalDependencies`, depstory:
 
-## Roadmap — contributions welcome
+1. searches the relevant `package.json` history for the first commit that added
+   the package name;
+2. scans JavaScript, TypeScript, Vue, and Svelte source files for literal ESM,
+   dynamic-import, re-export, and CommonJS references;
+3. prints the evidence as terminal text, Markdown, or versioned JSON.
 
-- Link introduction commits to GitHub pull requests and issues
-- Show the manifest diff and neighboring dependencies from the same commit
-- Add pnpm/yarn/npm workspace awareness
-- Add adapters for `pyproject.toml`, `Cargo.toml`, and `go.mod`
-- Calculate a conservative removal-confidence signal
-- Generate a standalone interactive HTML dependency timeline
-- Ship a GitHub Action that comments only when dependency history changes
+Source files are scanned once per run. Comments, ordinary strings, template
+strings, generated output, dependency folders, symlinks, and files larger than
+1 MiB are skipped.
 
-Each item is deliberately separable so a first-time contributor can own an
-adapter, output format, fixture, or detection rule.
+## Monorepos
 
-## Design principles
+Common workspace patterns declared in the root `package.json` are discovered
+automatically, including `*`, `**`, `?`, and exclusion patterns. Both the array
+form and the `workspaces.packages` form are supported. Use a package name or
+repository-relative path to narrow the report:
 
-1. Evidence before inference — every claim links to Git or a source file.
-2. Local first — repository contents never leave the machine.
-3. Read only — analysis must not modify the target repository.
-4. Explainable — JSON output exposes the same facts as the terminal output.
+```bash
+depstory --workspace @acme/web
+depstory react --workspace packages/web
+```
 
-## Contributing
+Usage is scoped to the selected workspace. Root dependencies are checked
+against the whole repository because they may support shared scripts or tools.
 
-Issues and pull requests are welcome. Please include a small fixture for every
-new parser or detector and run:
+## Reading the result carefully
+
+The report is evidence, not a verdict. No direct import does not always mean a
+package is unused: CLIs, loaders, framework plugins, configuration files, and
+transitive integrations may not appear in source imports. Likewise, a shallow
+clone may not contain the introducing commit; depstory marks that case in its
+output.
+
+Git history follows the current manifest path. If a manifest was renamed, older
+commits before that rename may require a full-clone investigation with Git.
+
+The machine-readable field definitions and compatibility rules live in
+[docs/json-output.md](docs/json-output.md).
+
+## Development
 
 ```bash
 npm run check
 npm test
+npm run coverage
+npm pack --dry-run
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
+There are no runtime dependencies and the tests do not need network access.
+Before proposing a parser change, add the smallest fixture that demonstrates
+the missing syntax. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow
+and [ROADMAP.md](ROADMAP.md) for work that is ready to be picked up.
 
 ## License
 
-MIT
+[MIT](LICENSE)

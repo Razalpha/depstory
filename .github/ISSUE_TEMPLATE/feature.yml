@@ -1,5 +1,5 @@
-name: Feature or adapter
-description: Propose a focused addition to depstory
+name: Feature request
+description: Propose a focused improvement or ecosystem adapter
 title: "feat: "
 labels: [enhancement]
 body:
@@ -7,7 +7,7 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: What dependency-history question cannot be answered today?
+      description: What repository investigation cannot be completed today?
     validations:
       required: true
   - type: textarea
@@ -20,7 +20,7 @@ body:
   - type: textarea
     id: output
     attributes:
-      label: Expected evidence
-      description: What should depstory report, without guessing?
+      label: Expected result
+      description: What should depstory report, and which repository evidence supports it?
     validations:
       required: true

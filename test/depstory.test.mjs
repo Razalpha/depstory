@@ -45,6 +45,13 @@ test("returns null when a directory has no Git history", async (t) => {
   assert.equal(await findIntroduction(cwd, "package.json", "zod"), null);
 });
 
+test("returns null for an initialized repository without commits", async (t) => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "depstory-empty-git-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  git(cwd, "init", "-q");
+  assert.equal(await findIntroduction(cwd, "package.json", "zod"), null);
+});
+
 test("extracts supported module syntax and ignores comments and examples", () => {
   const source = `
     import React from "react";
@@ -57,6 +64,9 @@ test("extracts supported module syntax and ignores comments and examples", () =>
     const example = 'import "inside-a-string"';
     const template = \`require("inside-a-template")\`;
     const metadata = import.meta.url;
+    const customImport = loader.import("not-a-module");
+    const customRequire = loader.require("also-not-a-module");
+    const matcher = /import("regex-example")/;
   `;
 
   assert.deepEqual(extractModuleSpecifiers(source).sort(), [
@@ -85,4 +95,31 @@ test("scans every source file once and maps package subpaths", async (t) => {
   assert.deepEqual(usage.get("dotenv"), ["src/app.ts"]);
   assert.deepEqual(usage.get("@scope/tool"), ["src/app.ts"]);
   assert.deepEqual(usage.get("unused"), []);
+});
+
+test("only scans script blocks in Vue and Svelte components", async (t) => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "depstory-components-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(path.join(cwd, "src"));
+  await writeFile(
+    path.join(cwd, "src", "Component.vue"),
+    '<template><p>import "template-example"</p></template>\n' +
+      '<script setup>import value from "real-vue-package";</script>\n',
+  );
+  await writeFile(
+    path.join(cwd, "src", "Widget.svelte"),
+    '<p>require("markup-example")</p>\n' +
+      '<script>const value = require("real-svelte-package");</script>\n',
+  );
+
+  const usage = await findUsageMap(cwd, [
+    "template-example",
+    "real-vue-package",
+    "markup-example",
+    "real-svelte-package",
+  ]);
+  assert.deepEqual(usage.get("template-example"), []);
+  assert.deepEqual(usage.get("real-vue-package"), ["src/Component.vue"]);
+  assert.deepEqual(usage.get("markup-example"), []);
+  assert.deepEqual(usage.get("real-svelte-package"), ["src/Widget.svelte"]);
 });
