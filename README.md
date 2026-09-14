@@ -1,5 +1,7 @@
 # depstory
 
+[![CI](https://github.com/Razalpha/depstory/actions/workflows/ci.yml/badge.svg)](https://github.com/Razalpha/depstory/actions/workflows/ci.yml)
+
 > Your manifest says **what** you installed. Git remembers **why**.
 
 `depstory` is a zero-dependency CLI that connects every JavaScript dependency to
@@ -30,14 +32,15 @@ Everything runs locally. There is no API key, telemetry, or AI-generated guess.
 Requires Node.js 20+ and Git.
 
 ```bash
-npx depstory
-npx depstory react
-npx depstory --markdown
-npx depstory --json
-npx depstory zod --cwd ../another-project
+npx github:Razalpha/depstory
+npx github:Razalpha/depstory react
+npx github:Razalpha/depstory --markdown
+npx github:Razalpha/depstory --json
+npx github:Razalpha/depstory zod --cwd ../another-project
 ```
 
-Until the first npm release, clone this repository and run:
+After the first npm release, the shorter `npx depstory` command will work too.
+For local development, clone this repository and run:
 
 ```bash
 npm test
