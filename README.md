@@ -17,6 +17,7 @@ demo-api — 1 dependency declaration across 1 manifest
 
 zod ^4.0.0 (dependencies)
   introduced 2026-09-14 in 68d9f4a1: validate incoming requests
+  resolved 4.1.5 via package-lock.json
   used by 2 file(s): src/api.ts, src/schema.ts
 ```
 
@@ -37,6 +38,7 @@ npx --yes github:Razalpha/depstory --workspace packages/web
 npx --yes github:Razalpha/depstory --markdown
 npx --yes github:Razalpha/depstory --json
 npx --yes github:Razalpha/depstory zod --cwd ../another-project
+npx --yes github:Razalpha/depstory diff origin/main...HEAD --markdown
 ```
 
 For repeated use:
@@ -45,6 +47,28 @@ For repeated use:
 npm install --global github:Razalpha/depstory
 depstory --help
 ```
+
+## Compare two revisions
+
+`diff` compares dependency declarations and resolved lockfile versions without
+checking out either revision:
+
+```bash
+depstory diff origin/main...HEAD
+depstory diff v0.2.0..HEAD --json
+depstory diff origin/main...HEAD --workspace packages/web --markdown
+depstory diff origin/main...HEAD --html > dependency-report.html
+```
+
+Two dots compare the exact endpoints. Three dots use the merge base and are the
+better choice for pull requests. Each changed package includes its declaration
+and resolved-version transition, current source and configuration references,
+introduction commit, related PR or closing issue when recorded in the commit
+message, and the relevant manifest patch.
+
+The HTML report is self-contained: it has no remote scripts, fonts, images, or
+runtime requests. See [docs/diff-output.md](docs/diff-output.md) for the complete
+comparison contract.
 
 ## What it reports
 
@@ -55,11 +79,18 @@ For every declaration in `dependencies`, `devDependencies`,
    the package name;
 2. scans JavaScript, TypeScript, Vue, and Svelte source files for literal ESM,
    dynamic-import, re-export, and CommonJS references;
-3. prints the evidence as terminal text, Markdown, or versioned JSON.
+3. checks recognized configuration files and package scripts;
+4. reads the selected npm, Yarn, or pnpm lockfile for the resolved version;
+5. prints the evidence as terminal text, Markdown, or versioned JSON.
 
 Source files are scanned once per run. Comments, ordinary strings, template
 strings, generated output, dependency folders, symlinks, and files larger than
 1 MiB are skipped.
+
+Lockfile detection follows the root `packageManager` field when present. Without
+that field, depstory checks `package-lock.json`, `pnpm-lock.yaml`, then
+`yarn.lock`. npm lockfile versions 1–3, Yarn classic/Berry selectors, and
+importer-based pnpm lockfiles are supported.
 
 ## Monorepos
 
@@ -87,8 +118,15 @@ output.
 Git history follows the current manifest path. If a manifest was renamed, older
 commits before that rename may require a full-clone investigation with Git.
 
-The machine-readable field definitions and compatibility rules live in
+The machine-readable inventory fields and compatibility rules live in
 [docs/json-output.md](docs/json-output.md).
+
+## Pull request reports
+
+The repository includes a read-only composite action that writes the comparison
+to the GitHub Actions job summary. It does not install the target project or
+execute repository code. Copy the workflow from
+[docs/github-action.md](docs/github-action.md) to add it to a project.
 
 ## Development
 

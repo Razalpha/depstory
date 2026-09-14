@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { listFilesAtRevision, readFileAtRevision } from "./git.mjs";
 
 const DEPENDENCY_SECTIONS = [
   "dependencies",
@@ -32,6 +33,10 @@ async function readPackageJson(absolutePath) {
     throw new Error(`Cannot read ${absolutePath}: ${error.message}`);
   }
 
+  return parsePackageJson(content, absolutePath);
+}
+
+export function parsePackageJson(content, label = "package.json") {
   try {
     const manifest = JSON.parse(content.replace(/^\uFEFF/, ""));
     if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
@@ -39,7 +44,7 @@ async function readPackageJson(absolutePath) {
     }
     return manifest;
   } catch (error) {
-    throw new Error(`${absolutePath} is not valid JSON: ${error.message}`);
+    throw new Error(`${label} is not valid JSON: ${error.message}`);
   }
 }
 
@@ -102,7 +107,7 @@ async function findNestedPackageFiles(directory, root, results = []) {
   return results;
 }
 
-function normalizeManifest(cwd, manifestPath, manifest) {
+export function normalizeManifest(cwd, manifestPath, manifest) {
   const workspacePath = path.posix.dirname(manifestPath);
   const normalizedWorkspacePath = workspacePath === "." ? "." : workspacePath;
   const workspace = manifest.name ||
@@ -127,15 +132,21 @@ function normalizeManifest(cwd, manifestPath, manifest) {
     }
   }
 
-  return { name: workspace, path: manifestPath, workspacePath: normalizedWorkspacePath, dependencies };
+  return {
+    name: workspace,
+    path: manifestPath,
+    workspacePath: normalizedWorkspacePath,
+    packageManager: typeof manifest.packageManager === "string" ? manifest.packageManager : null,
+    dependencies,
+  };
 }
 
-export async function discoverManifests(cwd) {
-  const rootPath = path.join(cwd, "package.json");
-  const root = await readPackageJson(rootPath);
-  if (!root) throw new Error(`No package.json found in ${cwd}`);
+function isIgnoredManifest(manifestPath) {
+  const directories = manifestPath.split("/").slice(0, -1);
+  return directories.some((directory) => IGNORED_DIRECTORIES.has(directory));
+}
 
-  const manifests = [normalizeManifest(cwd, "package.json", root)];
+export function selectWorkspaceManifestPaths(root, candidates) {
   const patterns = workspacePatterns(root)
     .filter((pattern) => typeof pattern === "string" && pattern.length > 0)
     .map((pattern) => ({
@@ -144,17 +155,54 @@ export async function discoverManifests(cwd) {
     }));
   const included = patterns.filter((pattern) => !pattern.excluded);
   const excluded = patterns.filter((pattern) => pattern.excluded);
-  if (included.length === 0) return manifests;
+  if (included.length === 0) return ["package.json"];
+
+  return [
+    "package.json",
+    ...candidates
+      .filter((manifestPath) => manifestPath !== "package.json")
+      .filter((manifestPath) => manifestPath.endsWith("/package.json"))
+      .filter((manifestPath) => !isIgnoredManifest(manifestPath))
+      .filter((manifestPath) => {
+        const directory = path.posix.dirname(manifestPath);
+        return included.some(({ expression }) => expression.test(directory)) &&
+          !excluded.some(({ expression }) => expression.test(directory));
+      })
+      .sort(),
+  ];
+}
+
+export async function discoverManifests(cwd) {
+  const rootPath = path.join(cwd, "package.json");
+  const root = await readPackageJson(rootPath);
+  if (!root) throw new Error(`No package.json found in ${cwd}`);
 
   const candidates = await findNestedPackageFiles(cwd, cwd);
-  for (const manifestPath of candidates.sort()) {
-    const directory = path.posix.dirname(manifestPath);
-    if (!included.some(({ expression }) => expression.test(directory))) continue;
-    if (excluded.some(({ expression }) => expression.test(directory))) continue;
+  const paths = selectWorkspaceManifestPaths(root, candidates);
+  const manifests = [normalizeManifest(cwd, "package.json", root)];
+  for (const manifestPath of paths.slice(1)) {
     const manifest = await readPackageJson(path.join(cwd, ...manifestPath.split("/")));
     if (manifest) manifests.push(normalizeManifest(cwd, manifestPath, manifest));
   }
 
+  return manifests;
+}
+
+export async function discoverManifestsAtRevision(cwd, revision) {
+  const rootContent = await readFileAtRevision(cwd, revision, "package.json");
+  if (rootContent === null) {
+    throw new Error(`No package.json found at Git revision ${revision.slice(0, 8)}.`);
+  }
+  const root = parsePackageJson(rootContent, `${revision.slice(0, 8)}:package.json`);
+  const files = await listFilesAtRevision(cwd, revision);
+  const paths = selectWorkspaceManifestPaths(root, files);
+  const manifests = [normalizeManifest(cwd, "package.json", root)];
+  for (const manifestPath of paths.slice(1)) {
+    const content = await readFileAtRevision(cwd, revision, manifestPath);
+    if (content === null) continue;
+    const manifest = parsePackageJson(content, `${revision.slice(0, 8)}:${manifestPath}`);
+    manifests.push(normalizeManifest(cwd, manifestPath, manifest));
+  }
   return manifests;
 }
 

@@ -23,10 +23,21 @@ async function writeJson(file, value) {
 test("validates mutually exclusive formats and required option values", () => {
   assert.throws(
     () => parseArguments(["--json", "--markdown"]),
-    /Choose either --json or --markdown/,
+    /Choose only one output format/,
   );
   assert.throws(() => parseArguments(["--workspace"]), /requires a package name/);
   assert.throws(() => parseArguments(["--cwd", "--json"]), /requires a directory path/);
+  assert.deepEqual(
+    parseArguments(["diff", "main...HEAD", "--html", "--workspace", "./packages/web/"]),
+    {
+      cwd: process.cwd(),
+      format: "html",
+      command: "diff",
+      dependency: null,
+      range: "main...HEAD",
+      workspace: "packages/web",
+    },
+  );
 });
 
 test("prints its package version without inspecting a repository", async () => {

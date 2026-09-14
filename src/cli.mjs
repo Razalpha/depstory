@@ -1,23 +1,34 @@
 import path from "node:path";
+import { findConfigurationUsage } from "./config-usage.mjs";
+import { buildDiffReport } from "./diff.mjs";
+import { renderDiffHtml, renderDiffMarkdown, renderDiffText } from "./diff-render.mjs";
 import { findIntroduction, inspectRepository } from "./git.mjs";
+import { lockVersion, resolveLocalVersions } from "./lockfiles.mjs";
 import { discoverManifests, findUsageMap } from "./scan.mjs";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 
 export function parseArguments(args) {
   const options = {
     cwd: process.cwd(),
     format: "text",
+    command: "story",
     dependency: null,
+    range: null,
     workspace: null,
   };
   let explicitFormat = null;
-  for (let index = 0; index < args.length; index += 1) {
+  let start = 0;
+  if (args[0] === "diff") {
+    options.command = "diff";
+    start = 1;
+  }
+  for (let index = start; index < args.length; index += 1) {
     const value = args[index];
-    if (value === "--json" || value === "--markdown") {
+    if (value === "--json" || value === "--markdown" || value === "--html") {
       const format = value.slice(2);
       if (explicitFormat && explicitFormat !== format) {
-        throw new Error("Choose either --json or --markdown, not both.");
+        throw new Error("Choose only one output format.");
       }
       explicitFormat = format;
       options.format = format;
@@ -43,7 +54,8 @@ export function parseArguments(args) {
     else if (value === "--help" || value === "-h") options.help = true;
     else if (value === "--version" || value === "-v") options.version = true;
     else if (value.startsWith("-")) throw new Error(`Unknown option: ${value}`);
-    else if (!options.dependency) options.dependency = value;
+    else if (options.command === "diff" && !options.range) options.range = value;
+    else if (options.command === "story" && !options.dependency) options.dependency = value;
     else throw new Error(`Unexpected argument: ${value}`);
   }
   return options;
@@ -54,12 +66,14 @@ export function help() {
 
 Usage:
   depstory [dependency] [options]
+  depstory diff [<base>..<head>] [options]
 
 Options:
   --cwd <path>          inspect another repository
   --workspace <name>    limit a monorepo report by package name or path
   --json                print the versioned JSON format
   --markdown            print a Markdown report
+  --html                print a standalone HTML comparison report
   -v, --version         print the installed version
   -h, --help            show this help
 
@@ -68,6 +82,7 @@ Examples:
   depstory --json
   depstory --workspace packages/web
   depstory zod --cwd ../my-project
+  depstory diff origin/main...HEAD --markdown
 `;
 }
 
@@ -109,15 +124,21 @@ function historyText(story, repository) {
 function renderText(project, manifests, stories, repository) {
   const noun = stories.length === 1 ? "dependency declaration" : "dependency declarations";
   const scope = manifests.length === 1 ? "1 manifest" : `${manifests.length} manifests`;
-  const lines = [`${project} — ${stories.length} ${noun} across ${scope}`, ""];
+  const lines = [`${safeLine(project)} — ${stories.length} ${noun} across ${scope}`, ""];
   for (const story of stories) {
     lines.push(`${safeLine(story.name)} ${safeLine(story.version)} (${story.section}${workspaceLabel(story, manifests.length)})`);
     lines.push(`  ${historyText(story, repository)}`);
+    if (story.resolvedVersion) {
+      lines.push(`  resolved ${safeLine(story.resolvedVersion)} via ${safeLine(story.lockfile.path)}`);
+    }
     lines.push(
       story.usageFiles.length
         ? `  used by ${story.usageFiles.length} file(s): ${story.usageFiles.slice(0, 4).map(safeLine).join(", ")}${story.usageFiles.length > 4 ? ", …" : ""}`
         : "  no direct source imports found",
     );
+    if (story.configurationFiles.length) {
+      lines.push(`  referenced by configuration: ${story.configurationFiles.map(safeLine).join(", ")}`);
+    }
     lines.push("");
   }
   return lines.join("\n").trimEnd();
@@ -133,12 +154,16 @@ function renderMarkdown(project, manifests, stories, repository) {
       lines.push(`- Workspace: ${inlineCode(story.workspace)} (${inlineCode(story.workspacePath)})`);
     }
     lines.push(`- History: ${markdownText(historyText(story, repository))}`);
-    lines.push(
-      story.usageFiles.length
-        ? `- Current usage: ${story.usageFiles.map(inlineCode).join(", ")}`
-        : "- Current usage: no direct source imports found",
-      "",
-    );
+    if (story.resolvedVersion) {
+      lines.push(`- Resolved version: ${inlineCode(story.resolvedVersion)} via ${inlineCode(story.lockfile.path)}`);
+    }
+    lines.push(story.usageFiles.length
+      ? `- Current usage: ${story.usageFiles.map(inlineCode).join(", ")}`
+      : "- Current usage: no direct source imports found");
+    if (story.configurationFiles.length) {
+      lines.push(`- Configuration references: ${story.configurationFiles.map(inlineCode).join(", ")}`);
+    }
+    lines.push("");
   }
   return lines.join("\n").trimEnd();
 }
@@ -156,6 +181,21 @@ export async function run(args) {
   if (options.version) {
     console.log(VERSION);
     return;
+  }
+  if (options.command === "diff") {
+    const report = await buildDiffReport(
+      options.cwd,
+      options.range ?? "HEAD~1..HEAD",
+      { workspace: options.workspace },
+    );
+    if (options.format === "json") console.log(JSON.stringify(report, null, 2));
+    else if (options.format === "markdown") console.log(renderDiffMarkdown(report));
+    else if (options.format === "html") console.log(renderDiffHtml(report));
+    else console.log(renderDiffText(report));
+    return;
+  }
+  if (options.format === "html") {
+    throw new Error("--html is available with the diff command.");
   }
 
   const allManifests = await discoverManifests(options.cwd);
@@ -184,9 +224,13 @@ export async function run(args) {
     uniqueDependencies,
   );
   const repositoryPromise = inspectRepository(options.cwd);
-  const [usage, repository] = await Promise.all([
+  const lockfilePromise = resolveLocalVersions(options.cwd, allManifests);
+  const configurationPromise = findConfigurationUsage(options.cwd, uniqueDependencies);
+  const [usage, repository, lockfile, configurationUsage] = await Promise.all([
     usagePromise,
     repositoryPromise,
+    lockfilePromise,
+    configurationPromise,
   ]);
   const introductions = await Promise.all(
     selected.map((item) => findIntroduction(
@@ -199,7 +243,11 @@ export async function run(args) {
   const stories = selected.map((item, index) => ({
     ...item,
     introduced: introductions[index],
+    resolvedVersion: lockVersion(lockfile, item),
+    lockfile: lockfile ? { type: lockfile.type, path: lockfile.path } : null,
     usageFiles: (usage.get(item.name) ?? [])
+      .filter((file) => belongsToWorkspace(file, item.workspacePath)),
+    configurationFiles: (configurationUsage.get(item.name) ?? [])
       .filter((file) => belongsToWorkspace(file, item.workspacePath)),
   }));
   const project = allManifests[0].name ?? path.basename(options.cwd);
@@ -207,9 +255,11 @@ export async function run(args) {
   if (options.format === "json") {
     console.log(JSON.stringify({
       schemaVersion: 1,
+      reportType: "inventory",
       project,
       manifestCount: manifests.length,
       repository,
+      lockfile: lockfile ? { type: lockfile.type, path: lockfile.path } : null,
       stories,
     }, null, 2));
   } else if (options.format === "markdown") {
