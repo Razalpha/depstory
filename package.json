@@ -7,10 +7,11 @@
     "depstory": "./bin/depstory.mjs"
   },
   "scripts": {
-    "check": "node --check bin/depstory.mjs && node --check src/cli.mjs && node --check src/config-usage.mjs && node --check src/diff.mjs && node --check src/diff-render.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/lockfiles.mjs && node --check src/manifest.mjs && node --check src/references.mjs && node --check src/scan.mjs",
+    "check": "node --check bin/depstory.mjs && node --check scripts/serve-site.mjs && node --check src/cli.mjs && node --check src/config-usage.mjs && node --check src/diff.mjs && node --check src/diff-render.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/lockfiles.mjs && node --check src/manifest.mjs && node --check src/references.mjs && node --check src/scan.mjs && node --check dist/site.js",
     "test": "node --test",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=75",
-    "demo": "node bin/depstory.mjs"
+    "demo": "node bin/depstory.mjs",
+    "site:preview": "node scripts/serve-site.mjs"
   },
   "engines": {
     "node": ">=20"
