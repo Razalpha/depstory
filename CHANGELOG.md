@@ -5,6 +5,19 @@ while keeping the usual pre-1.0 allowance for changes to new interfaces.
 
 ## Unreleased
 
+## 0.3.0 - 2026-09-14
+
+### Added
+
+- Git revision comparison with two-dot and merge-base-aware three-dot ranges.
+- Added, removed, declared-version, section, and resolved-version change types.
+- npm, Yarn, and pnpm lockfile resolution.
+- Package-script and common tool-configuration evidence.
+- Commit, pull request, and closing-issue links for GitHub remotes.
+- Standalone HTML timeline, Markdown summary, and versioned JSON output.
+- A read-only composite GitHub Action for pull request job summaries.
+- Batched Git object reads for revision scans.
+
 ## 0.2.0 - 2026-09-14
 
 ### Added

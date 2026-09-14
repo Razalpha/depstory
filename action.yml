@@ -1,0 +1,32 @@
+name: Dependency change report
+description: Add an evidence-based dependency diff to a GitHub Actions job summary.
+author: Razalpha
+inputs:
+  base:
+    description: Base Git commit or ref.
+    required: true
+  head:
+    description: Head Git commit or ref.
+    required: true
+  workspace:
+    description: Optional workspace package name or repository-relative path.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Build dependency report
+      shell: bash
+      env:
+        DEPSTORY_BASE: ${{ inputs.base }}
+        DEPSTORY_HEAD: ${{ inputs.head }}
+        DEPSTORY_WORKSPACE: ${{ inputs.workspace }}
+      run: |
+        args=(diff "$DEPSTORY_BASE...$DEPSTORY_HEAD" --markdown)
+        if [[ -n "$DEPSTORY_WORKSPACE" ]]; then
+          args+=(--workspace "$DEPSTORY_WORKSPACE")
+        fi
+        node "$GITHUB_ACTION_PATH/bin/depstory.mjs" "${args[@]}" >> "$GITHUB_STEP_SUMMARY"
+branding:
+  icon: git-pull-request
+  color: blue

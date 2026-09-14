@@ -18,6 +18,7 @@ demo-api — 1 dependency declaration across 1 manifest
 
 zod ^4.0.0 (dependencies)
   introduced 2026-09-14 in 68d9f4a1: validate incoming requests
+  resolved 4.1.5 via package-lock.json
   used by 2 file(s): src/api.ts, src/schema.ts
 ```
 
@@ -38,6 +39,7 @@ npx --yes github:Razalpha/depstory --workspace packages/web
 npx --yes github:Razalpha/depstory --markdown
 npx --yes github:Razalpha/depstory --json
 npx --yes github:Razalpha/depstory zod --cwd ../baska-proje
+npx --yes github:Razalpha/depstory diff origin/main...HEAD --markdown
 ```
 
 Sık kullanım için:
@@ -47,6 +49,28 @@ npm install --global github:Razalpha/depstory
 depstory --help
 ```
 
+## İki Git sürümünü karşılaştırma
+
+`diff`, iki sürüm arasında checkout yapmadan hem bağımlılık kayıtlarını hem de
+kilit dosyasındaki çözümlenmiş sürümleri karşılaştırır:
+
+```bash
+depstory diff origin/main...HEAD
+depstory diff v0.2.0..HEAD --json
+depstory diff origin/main...HEAD --workspace packages/web --markdown
+depstory diff origin/main...HEAD --html > dependency-report.html
+```
+
+İki nokta verilen iki ucu doğrudan karşılaştırır. Üç nokta merge-base'i kullanır
+ve pull request incelemeleri için daha uygundur. Her değişiklik; kayıtlı ve
+çözümlenmiş sürüm geçişini, güncel kaynak ve yapılandırma referanslarını, eklenme
+commit'ini, commit mesajında yer alıyorsa ilgili PR veya kapanan issue bağlantısını
+ve manifest farkını içerir.
+
+HTML raporu tek dosyadır; uzak betik, yazı tipi, görsel veya çalışma zamanı isteği
+kullanmaz. Karşılaştırma alanlarının tamamı
+[docs/diff-output.md](docs/diff-output.md) içinde açıklanır.
+
 ## Ne gösterir?
 
 depstory; `dependencies`, `devDependencies`, `peerDependencies` ve
@@ -55,11 +79,18 @@ depstory; `dependencies`, `devDependencies`, `peerDependencies` ve
 1. ilgili `package.json` geçmişinde paket adını ekleyen ilk commit'i arar;
 2. JavaScript, TypeScript, Vue ve Svelte dosyalarındaki doğrudan ESM, dinamik
    import, yeniden dışa aktarma ve CommonJS kullanımlarını tarar;
-3. bulguları terminal metni, Markdown veya sürümlü JSON olarak verir.
+3. tanınan yapılandırma dosyalarını ve paket betiklerini kontrol eder;
+4. npm, Yarn veya pnpm kilit dosyasından çözümlenmiş sürümü okur;
+5. bulguları terminal metni, Markdown veya sürümlü JSON olarak verir.
 
 Kaynak dosyalar her çalıştırmada bir kez taranır. Yorumlar, sıradan metinler,
 şablon metinleri, derleme çıktıları, bağımlılık klasörleri, sembolik bağlantılar
 ve 1 MiB'tan büyük dosyalar atlanır.
+
+Kök manifestte `packageManager` alanı varsa kilit dosyası buna göre seçilir. Bu
+alan yoksa sırasıyla `package-lock.json`, `pnpm-lock.yaml` ve `yarn.lock` aranır.
+npm kilit dosyası 1–3, Yarn classic/Berry seçicileri ve importer tabanlı pnpm
+kilit dosyaları desteklenir.
 
 ## Monorepo desteği
 
@@ -88,6 +119,13 @@ bu değişiklikten daha eski kayıtlar için Git üzerinde ayrıca inceleme gere
 
 JSON alanları ve uyumluluk kuralları [docs/json-output.md](docs/json-output.md)
 dosyasında açıklanır.
+
+## Pull request raporları
+
+Depodaki salt okunur composite action, karşılaştırmayı GitHub Actions iş özetine
+yazar. Hedef projenin bağımlılıklarını kurmaz ve depo kodunu çalıştırmaz. Bir
+projeye eklemek için [docs/github-action.md](docs/github-action.md) içindeki
+workflow örneğini kullanabilirsiniz.
 
 ## Geliştirme
 

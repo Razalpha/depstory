@@ -1,7 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { listFilesAtRevision, visitFilesAtRevision } from "./git.mjs";
 import { extractModuleSpecifiers } from "./imports.mjs";
-export { discoverManifests, readManifest } from "./manifest.mjs";
+export {
+  discoverManifests,
+  discoverManifestsAtRevision,
+  readManifest,
+} from "./manifest.mjs";
 
 const SOURCE_EXTENSIONS = new Set([
   ".js",
@@ -68,17 +73,14 @@ function scriptContent(relative, content) {
     .join("\n");
 }
 
-export async function findUsageMap(cwd, dependencies) {
+async function scanUsage(files, dependencies, reader) {
   const usage = new Map(dependencies.map((dependency) => [dependency, []]));
   if (usage.size === 0) return usage;
-  const files = (await walk(cwd, cwd)).sort();
 
   for (const relative of files) {
-    const absolute = path.join(cwd, relative);
     try {
-      const stat = await fs.stat(absolute);
-      if (stat.size > 1024 * 1024) continue;
-      const content = await fs.readFile(absolute, "utf8");
+      const content = await reader(relative);
+      if (content === null || Buffer.byteLength(content) > 1024 * 1024) continue;
       const specifiers = extractModuleSpecifiers(scriptContent(relative, content));
       const importedPackages = new Set(specifiers.map(packageNameFromSpecifier));
       for (const dependency of importedPackages) {
@@ -94,5 +96,37 @@ export async function findUsageMap(cwd, dependencies) {
     }
   }
 
+  return usage;
+}
+
+export async function findUsageMap(cwd, dependencies) {
+  if (dependencies.length === 0) return new Map();
+  const files = (await walk(cwd, cwd)).sort();
+  return scanUsage(
+    files,
+    dependencies,
+    async (relative) => {
+      const absolute = path.join(cwd, relative);
+      const stat = await fs.stat(absolute);
+      return stat.size > 1024 * 1024 ? null : fs.readFile(absolute, "utf8");
+    },
+  );
+}
+
+export async function findUsageMapAtRevision(cwd, revision, dependencies) {
+  if (dependencies.length === 0) return new Map();
+  const files = (await listFilesAtRevision(cwd, revision))
+    .filter((file) => SOURCE_EXTENSIONS.has(path.posix.extname(file)))
+    .filter((file) => !file.split("/").some((part) => IGNORED_DIRECTORIES.has(part)))
+    .sort();
+  const usage = new Map(dependencies.map((dependency) => [dependency, []]));
+  if (usage.size === 0) return usage;
+  await visitFilesAtRevision(cwd, revision, files, (relative, content) => {
+    const specifiers = extractModuleSpecifiers(scriptContent(relative, content));
+    const importedPackages = new Set(specifiers.map(packageNameFromSpecifier));
+    for (const dependency of importedPackages) {
+      if (usage.has(dependency)) usage.get(dependency).push(relative);
+    }
+  });
   return usage;
 }
