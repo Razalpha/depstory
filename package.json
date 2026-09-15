@@ -1,13 +1,13 @@
 {
   "name": "depstory",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Explain when, why, and where a JavaScript dependency entered a repository.",
   "type": "module",
   "bin": {
     "depstory": "./bin/depstory.mjs"
   },
   "scripts": {
-    "check": "node --check bin/depstory.mjs && node --check scripts/serve-site.mjs && node --check src/cli.mjs && node --check src/config-usage.mjs && node --check src/diff.mjs && node --check src/diff-render.mjs && node --check src/git.mjs && node --check src/imports.mjs && node --check src/lockfiles.mjs && node --check src/manifest.mjs && node --check src/references.mjs && node --check src/scan.mjs && node --check dist/site.js",
+    "check": "node --check bin/depstory.mjs && node --check scripts/run-action.mjs && node --check scripts/serve-site.mjs && node --check src/cli.mjs && node --check src/config-usage.mjs && node --check src/diff.mjs && node --check src/diff-render.mjs && node --check src/git.mjs && node --check src/github-action.mjs && node --check src/imports.mjs && node --check src/lockfiles.mjs && node --check src/manifest.mjs && node --check src/references.mjs && node --check src/scan.mjs && node --check dist/site.js",
     "test": "node --test",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=75",
     "demo": "node bin/depstory.mjs",
@@ -35,6 +35,7 @@
   "files": [
     "bin",
     "src",
+    "scripts/run-action.mjs",
     "docs",
     "action.yml",
     "CHANGELOG.md",

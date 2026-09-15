@@ -125,7 +125,8 @@ dosyasında açıklanır.
 Depodaki salt okunur composite action, karşılaştırmayı GitHub Actions iş özetine
 yazar. Hedef projenin bağımlılıklarını kurmaz ve depo kodunu çalıştırmaz. Bir
 projeye eklemek için [docs/github-action.md](docs/github-action.md) içindeki
-workflow örneğini kullanabilirsiniz.
+workflow örneğini kullanabilirsiniz. Adım ayrıca sonraki workflow adımları için
+değişiklik sayılarını ve `has-changes` değerini üretir.
 
 ## Geliştirme
 

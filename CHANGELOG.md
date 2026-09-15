@@ -9,6 +9,7 @@ while keeping the usual pre-1.0 allowance for changes to new interfaces.
 
 - A responsive product site with an interactive dependency-review example.
 - A zero-dependency local server and static-site integrity tests.
+- GitHub Action outputs for change detection and per-status dependency counts.
 
 ## 0.3.0 - 2026-09-14
 

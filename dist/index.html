@@ -28,7 +28,7 @@
       <a href="#action">GitHub Action</a>
       <a href="https://github.com/Razalpha/depstory">Source</a>
     </nav>
-    <a class="version" href="https://github.com/Razalpha/depstory/releases/tag/v0.3.0">v0.3.0</a>
+    <a class="version" href="https://github.com/Razalpha/depstory/releases/tag/v0.4.0">v0.4.0</a>
   </header>
 
   <main id="main">
@@ -132,7 +132,7 @@
         <a class="text-link" href="https://github.com/Razalpha/depstory/blob/main/docs/github-action.md">Read the Action guide <span aria-hidden="true">↗</span></a>
       </div>
       <div class="code-panel">
-        <div class="code-label"><span>dependency-review.yml</span><button class="copy-button" type="button" data-copy="- uses: Razalpha/depstory@v0.3.0&#10;  with:&#10;    base: ${{ github.event.pull_request.base.sha }}&#10;    head: ${{ github.event.pull_request.head.sha }}">Copy</button></div>
+        <div class="code-label"><span>dependency-review.yml</span><button class="copy-button" type="button" data-copy="- uses: Razalpha/depstory@v0.4.0&#10;  with:&#10;    base: ${{ github.event.pull_request.base.sha }}&#10;    head: ${{ github.event.pull_request.head.sha }}">Copy</button></div>
         <pre><code><span class="muted">permissions:</span>
   contents: read
 
@@ -140,7 +140,7 @@
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: <mark>Razalpha/depstory@v0.3.0</mark>
+  - uses: <mark>Razalpha/depstory@v0.4.0</mark>
     with:
       base: ${{ github.event.pull_request.base.sha }}
       head: ${{ github.event.pull_request.head.sha }}</code></pre>

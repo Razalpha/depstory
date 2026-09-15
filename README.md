@@ -126,7 +126,8 @@ The machine-readable inventory fields and compatibility rules live in
 The repository includes a read-only composite action that writes the comparison
 to the GitHub Actions job summary. It does not install the target project or
 execute repository code. Copy the workflow from
-[docs/github-action.md](docs/github-action.md) to add it to a project.
+[docs/github-action.md](docs/github-action.md) to add it to a project. The step
+also exposes change counts and a `has-changes` flag for later workflow steps.
 
 ## Development
 

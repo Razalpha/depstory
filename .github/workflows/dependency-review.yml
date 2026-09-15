@@ -15,6 +15,15 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./
+        id: depstory
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: ${{ github.event.pull_request.head.sha }}
+      - name: Verify Action outputs
+        shell: bash
+        env:
+          HAS_CHANGES: ${{ steps.depstory.outputs.has-changes }}
+          TOTAL: ${{ steps.depstory.outputs.total }}
+        run: |
+          [[ "$HAS_CHANGES" == "true" || "$HAS_CHANGES" == "false" ]]
+          [[ "$TOTAL" =~ ^[0-9]+$ ]]
