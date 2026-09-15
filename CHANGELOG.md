@@ -5,6 +5,8 @@ while keeping the usual pre-1.0 allowance for changes to new interfaces.
 
 ## Unreleased
 
+## 0.4.0 - 2026-09-15
+
 ### Added
 
 - A responsive product site with an interactive dependency-review example.
