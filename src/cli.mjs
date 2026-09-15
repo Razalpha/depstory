@@ -6,7 +6,7 @@ import { findIntroduction, inspectRepository } from "./git.mjs";
 import { lockVersion, resolveLocalVersions } from "./lockfiles.mjs";
 import { discoverManifests, findUsageMap } from "./scan.mjs";
 
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.0";
 
 export function parseArguments(args) {
   const options = {

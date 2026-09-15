@@ -12,21 +12,36 @@ inputs:
     description: Optional workspace package name or repository-relative path.
     required: false
     default: ""
+outputs:
+  has-changes:
+    description: Whether the comparison contains any dependency change.
+    value: ${{ steps.report.outputs.has-changes }}
+  total:
+    description: Total number of dependency changes.
+    value: ${{ steps.report.outputs.total }}
+  added:
+    description: Number of added dependency declarations.
+    value: ${{ steps.report.outputs.added }}
+  removed:
+    description: Number of removed dependency declarations.
+    value: ${{ steps.report.outputs.removed }}
+  changed:
+    description: Number of changed dependency declarations.
+    value: ${{ steps.report.outputs.changed }}
+  resolved:
+    description: Number of lockfile-only resolved-version changes.
+    value: ${{ steps.report.outputs.resolved }}
 runs:
   using: composite
   steps:
     - name: Build dependency report
+      id: report
       shell: bash
       env:
         DEPSTORY_BASE: ${{ inputs.base }}
         DEPSTORY_HEAD: ${{ inputs.head }}
         DEPSTORY_WORKSPACE: ${{ inputs.workspace }}
-      run: |
-        args=(diff "$DEPSTORY_BASE...$DEPSTORY_HEAD" --markdown)
-        if [[ -n "$DEPSTORY_WORKSPACE" ]]; then
-          args+=(--workspace "$DEPSTORY_WORKSPACE")
-        fi
-        node "$GITHUB_ACTION_PATH/bin/depstory.mjs" "${args[@]}" >> "$GITHUB_STEP_SUMMARY"
+      run: node "$GITHUB_ACTION_PATH/scripts/run-action.mjs"
 branding:
   icon: git-pull-request
   color: blue
